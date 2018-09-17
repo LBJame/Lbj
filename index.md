@@ -1,37 +1,58 @@
-## Welcome to GitHub Pages
+#include <iostream>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include<opencv2/opencv.hpp>
+#include <math.h>
+using namespace std;
+using namespace cv;
 
-You can use the [editor on GitHub](https://github.com/LBJame/Lbj/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/LBJame/Lbj/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+int main()
+{
+	Mat I1 = imread("1.bmp");
+	cvtColor(I1, I1, CV_BGR2GRAY);
+	int m = getOptimalDFTSize(I1.rows);
+	int n = getOptimalDFTSize(I1.cols);
+	Mat padded;
+	Mat real, ima;
+	copyMakeBorder(I1, padded, 0, m - I1.rows, 0, n - I1.cols, BORDER_CONSTANT, Scalar::all(0));
+	for(int i=0;i<=padded.rows;i++)
+		for (int j = 0; j <= padded.cols; j++)
+		{
+			ima.at<uchar>(i, j) = sin(padded.at<uchar>(i, j));
+			real.at<uchar>(i, j) = cos(padded.at<uchar>(i, j));
+		}
+	Mat planes[] = { real,ima };
+	Mat complexI;
+	merge(planes, 2, complexI);
+	//Mat planes[] = { Mat_<float>(padded),Mat::zeros(padded.size(),CV_32F) };
+	//Mat complexI;
+	//merge(planes, 2, complexI);
+	dft(complexI, complexI);
+	split(complexI, planes);
+	magnitude(planes[0], planes[1], planes[0]);
+	Mat magnitudeImage = planes[0];
+	magnitudeImage += Scalar::all(1);
+	log(magnitudeImage, magnitudeImage);
+	magnitudeImage = magnitudeImage(Rect(0, 0, magnitudeImage.cols &-2, magnitudeImage.rows &-2));
+	int cx = magnitudeImage.cols / 2;
+	int cy = magnitudeImage.rows / 2;
+	Mat q0(magnitudeImage, Rect(0, 0, cx, cy));
+	Mat q1(magnitudeImage, Rect(cx, 0, cx, cy));
+	Mat q2(magnitudeImage, Rect(0, cy, cx, cy));
+	Mat q3(magnitudeImage, Rect(cx, cy, cx, cy));
+	Mat tmp;
+	q0.copyTo(tmp);
+	q3.copyTo(q0);
+	tmp.copyTo(q3);
+	q1.copyTo(tmp);
+	q2.copyTo(q1);
+	tmp.copyTo(q2);
+	normalize(magnitudeImage, magnitudeImage, 0, 1, NORM_MINMAX);
+	imshow("Fourier", magnitudeImage);
+	waitKey();
+	
+	
+	return 0;
+	
+}
